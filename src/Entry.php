@@ -15,9 +15,9 @@ use DateTimeInterface;
 class Entry
 {
     /**
-     * @param string $url
-     * @param DateTimeInterface $lastModificationDate
-     * @param array $additional
+     * @param string $url Польный адрес страницы
+     * @param DateTimeInterface $lastModificationDate Дата последней модификации страницы
+     * @param array $additional Дополнительные данные генерируемой записи
      */
     public function __construct(
         public string $url,
