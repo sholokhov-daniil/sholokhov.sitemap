@@ -90,9 +90,9 @@ class SitemapGenerator
      */
     private string $indexFileName = 'sitemap.xml';
 
-    private object $configuration;
+    private Configuration $configuration;
 
-    public function __construct(object $configuration)
+    public function __construct(Configuration $configuration)
     {
         $this->configuration = $configuration;
     }
