@@ -2,10 +2,13 @@
 
 namespace Sholokhov\Sitemap;
 
-use Bitrix\Main\EventResult;
 use Sholokhov\Sitemap\Source\SourceInterface;
 use Sholokhov\Sitemap\Modifier\ModifierInterface;
 use Sholokhov\Sitemap\Validator\ValidatorInterface;
+
+use Bitrix\Main\EventResult;
+use Bitrix\Seo\Sitemap\File\Index;
+use Bitrix\Seo\Sitemap\File\Runtime;
 
 /**
  *  Генератор карты сайта.
@@ -45,7 +48,7 @@ class SitemapGenerator
     /**
      * Источники данных URL адресов, для включения в карту сайта
      *
-     * @var SourceInterface[]
+     * @var SourceInterface[][]
      */
     private array $sources = [];
 
@@ -77,12 +80,22 @@ class SitemapGenerator
      */
     private int $countEntry = 0;
 
+
+    private int $maxFileSize = 0;
+
     /**
-     * ID сайта, для которого генерируется карта
+     * Наименование индексной страницы карты сайта
      *
      * @var string
      */
-    private string $siteId;
+    private string $indexFileName = 'sitemap.xml';
+
+    private object $configuration;
+
+    public function __construct(object $configuration)
+    {
+        $this->configuration = $configuration;
+    }
 
     /**
      * Запустить генерацию карты сайта
@@ -91,17 +104,28 @@ class SitemapGenerator
      */
     public function run(): void
     {
+        $pid = '';
+        $index = new Index($this->indexFileName, $this->configuration->toArray());
+
+        foreach ($this->sources as $fileName => $iterator) {
+            foreach ($iterator as $source) {
+                $this->generate($pid, $fileName, $source);
+            }
+        }
+
+        $index->createIndex($this->indexEntries);
     }
 
     /**
      * Добавить источник данных
      *
+     * @param string $sitemapName
      * @param SourceInterface $source
      * @return $this
      */
-    public function addSource(SourceInterface $source): self
+    public function addSource(string $sitemapName, SourceInterface $source): self
     {
-        $this->sources[] = $source;
+        $this->sources[$sitemapName][] = $source;
         return $this;
     }
 
@@ -110,13 +134,18 @@ class SitemapGenerator
      *
      * Все ранее добавленные источники удалятся
      *
-     * @param array $sources
+     * @param SourceInterface[][] $sources
      * @return $this
      */
     public function setSources(array $sources): self
     {
         $this->sources = [];
-        array_walk($sources, $this->addSource(...));
+
+        foreach ($sources as $filename => $iterator) {
+            foreach ($iterator as $source) {
+                $this->addSource($filename, $source);
+            }
+        }
 
         return $this;
     }
@@ -138,7 +167,7 @@ class SitemapGenerator
      *
      * Все ранее добавленные модификаторы удалятся
      *
-     * @param array $modifiers
+     * @param ModifierInterface[] $modifiers
      * @return $this
      */
     public function setModifiers(array $modifiers): self
@@ -166,7 +195,7 @@ class SitemapGenerator
      *
      * Все ранее добавленные валидаторов удалятся
      *
-     * @param array $validators
+     * @param ValidatorInterface[] $validators
      * @return $this
      */
     public function setValidators(array $validators): self
@@ -175,5 +204,119 @@ class SitemapGenerator
         array_walk($validators, $this->addValidator(...));
 
         return $this;
+    }
+
+    /**
+     * Наименование индексного файла карты сайта
+     *
+     * @param string $fileName
+     * @return $this
+     */
+    public function setIndexFileName(string $fileName): self
+    {
+        $this->indexFileName = $fileName;
+        return $this;
+    }
+
+    /**
+     * Создание файла карты сайта
+     *
+     * @param string $pid
+     * @param string $fileName
+     * @param SourceInterface $source
+     * @return void
+     */
+    private function generate(string $pid, string $fileName, SourceInterface $source): void
+    {
+        $runtime = new Runtime($pid, $fileName, $this->configuration->toArray());
+
+        while ($entry = $source->fetch()) {
+            $this->modify($entry);
+
+            // TODO: Добавить событие, для модификации
+
+            if ($this->validate($entry) === false) {
+                continue;
+            }
+
+            $this->addEntry($entry, $runtime);
+        }
+
+        if ($runtime->isCurrentPartNotEmpty()) {
+            $runtime->finish();
+            $this->indexEntries[] = $runtime;
+        } elseif ($runtime->isExists()) {
+            $runtime->delete();
+        }
+
+        $this->countEntry = 0;
+    }
+
+    /**
+     * Модифицировать адрес
+     *
+     * @param Entry $entry
+     * @return void
+     */
+    private function modify(Entry $entry): void
+    {
+        foreach ($this->modifiers as $modifier) {
+            $modifier->modify($entry);
+        }
+    }
+
+    /**
+     * Проверка корректности ссылки
+     *
+     * @param Entry $entry
+     * @return bool
+     */
+    private function validate(Entry $entry): bool
+    {
+        foreach ($this->validators as $validator) {
+            $isValid = $validator->validate($entry);
+            if ($isValid === false) {
+                // TODO: Добавить логирование
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Добавление ссылки в карту сайта
+     *
+     * @param Entry $entry
+     * @param Runtime $runtime
+     * @return void
+     */
+    private function addEntry(Entry $entry, Runtime $runtime): void
+    {
+        // TODO: Добавить проверку на дублирование
+
+        if ($this->isSplitNeeded()) {
+            $runtime->split();
+            $this->countEntry = 0;
+        }
+
+        $data = [
+            'XML_LOC' => $entry->url,
+            'XML_LASTMOD' => $entry->lastModificationDate->format('c'),
+        ];
+
+        $runtime->addEntry($data);
+        // TODO: Добавить запись в хранилище, что ссылка уже добавлена
+        $this->countEntry++;
+    }
+
+    /**
+     * Определение необходимости разделения файла карты сайта.
+     *
+     * @return bool
+     */
+    private function isSplitNeeded(): bool
+    {
+        return $this->maxFileSize > 0 && $this->countEntry > $this->maxFileSize;
     }
 }
