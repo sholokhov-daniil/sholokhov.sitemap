@@ -1,0 +1,22 @@
+{
+  "name": "sholokhov/bitrix-exchange",
+  "keywords": ["bitrix", "sitemap"],
+  "homepage": "https://github.com/sholokhov-daniil/sholokhov.sitemap",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Daniil Sholokhov",
+      "email": "sholokhovdaniil@yandex.ru",
+      "homepage": "https://t.me/sholokhov22"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Sholokhov\\Sitemap\\": "./src"
+    }
+  },
+  "require": {
+    "php": ">=8.4"
+  }
+}
