@@ -70,9 +70,9 @@ class SitemapGenerator
     /**
      * Записи необходимые добавить в индексный файл карты сайта
      *
-     * @var array
+     * @var Runtime[]
      */
-    private array $indexEntries = [];
+    private array $runtimes = [];
 
     /**
      * Количество записей в файле карты сайта
@@ -109,14 +109,25 @@ class SitemapGenerator
      */
     public function run(): void
     {
-        $pid = '';
+        $this->runtimes = [];
+        $pid = $this->configuration->siteId;
         $index = new Index($this->indexFileName, $this->configuration->toArray());
 
         foreach ($this->strategies as $strategy) {
             $this->generate($pid, $strategy);
         }
 
-        $index->createIndex($this->indexEntries);
+        foreach ($this->runtimes as $name => $runtime) {
+            if ($runtime->isCurrentPartNotEmpty()) {
+                $runtime->finish();
+            } elseif ($runtime->isExists()) {
+                unset($this->runtimes[$name]);
+                $runtime->delete();
+            }
+        }
+
+        $index->createIndex($this->runtimes);
+        $this->runtimes = [];
     }
 
     /**
@@ -229,7 +240,7 @@ class SitemapGenerator
      */
     private function generate(string $pid, StrategyInterface $strategy): void
     {
-        $runtime = new Runtime($pid, $strategy->getFileName(), $this->configuration->toArray());
+        $runtime = $this->getOrCreateRuntime($pid, $strategy);
 
         while ($entry = $strategy->fetch()) {
             $this->modify($entry);
@@ -243,14 +254,20 @@ class SitemapGenerator
             $this->addEntry($entry, $runtime);
         }
 
-        if ($runtime->isCurrentPartNotEmpty()) {
-            $runtime->finish();
-            $this->indexEntries[] = $runtime;
-        } elseif ($runtime->isExists()) {
-            $runtime->delete();
-        }
-
         $this->countEntry = 0;
+    }
+
+    /**
+     * Создает или возвращает файл вложенного файла с картой сайта
+     *
+     * @param string $pid
+     * @param StrategyInterface $strategy
+     * @return Runtime
+     */
+    private function getOrCreateRuntime(string $pid, StrategyInterface $strategy): Runtime
+    {
+        $fileName = $strategy->getFileName();
+        return $this->runtimes[$fileName] ??= new Runtime($pid, $fileName, $this->configuration->toArray());
     }
 
     /**
