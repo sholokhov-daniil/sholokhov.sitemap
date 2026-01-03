@@ -2,12 +2,12 @@
 
 namespace Sholokhov\Sitemap;
 
-use Bitrix\Main\ArgumentException;
-use Bitrix\Main\Localization\LanguageTable;
-use Bitrix\Main\ObjectPropertyException;
+use Sholokhov\Sitemap\Exception\SitemapException;
+
 use Bitrix\Main\SiteTable;
 use Bitrix\Main\SystemException;
-use Sholokhov\Sitemap\Exception\SitemapException;
+use Bitrix\Main\ArgumentException;
+use Bitrix\Main\ObjectPropertyException;
 
 /**
  * Конфигурация генератора карты сайта
@@ -74,11 +74,11 @@ class Configuration
 
     /**
      * @param string $name
-     * @param $value
+     * @param mixed $value
      * @return void
      * @throws SitemapException
      */
-    public function __set(string $name, $value): void
+    public function __set(string $name, mixed $value): void
     {
         $key = $this->getAliasName($name);
         $this->data[$key] = $value;
