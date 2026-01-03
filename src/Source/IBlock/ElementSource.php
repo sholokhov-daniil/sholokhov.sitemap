@@ -7,6 +7,7 @@ use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\SystemException;
 use Sholokhov\Sitemap\Entry;
 use Sholokhov\Sitemap\Exception\SitemapException;
+use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockItem;
 use Sholokhov\Sitemap\Source\SourceInterface;
 use Sholokhov\Sitemap\Strategy\IBlock\Normalizer\ElementEntryNormalizer;
 
@@ -42,7 +43,7 @@ class ElementSource implements SourceInterface
 
     public function __construct(
         protected readonly int $sectionId,
-        protected readonly int $iBlockId,
+        protected readonly IBlockItem $settings,
         protected readonly string $siteId
     )
     {
@@ -103,7 +104,7 @@ class ElementSource implements SourceInterface
                 'DETAIL_PAGE_URL' => 'IBLOCK.DETAIL_PAGE_URL',
             ],
             'filter' => [
-                '=IBLOCK_ID' => $this->iBlockId,
+                '=IBLOCK_ID' => $this->settings->id,
                 '=IBLOCK_SECTION_ID' => $this->sectionId,
                 '=ACTIVE' => 'Y',
             ],

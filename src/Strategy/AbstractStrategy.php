@@ -29,14 +29,14 @@ abstract class AbstractStrategy implements StrategyInterface
      * @return Entry|null
      *
      */
-    abstract protected function logic(): Entry|null;
+    abstract protected function logic(): ?Entry;
 
     /**
      * Получение ссылки, для записи
      *
      * @return Entry|null
      */
-    final public function fetch(): Entry|null
+    final public function fetch(): ?Entry
     {
         if (!$this->running) {
             $this->configuration();

@@ -5,6 +5,7 @@ namespace Sholokhov\Sitemap\Source\IBlock;
 use Bitrix\Main\Loader;
 use Sholokhov\Sitemap\Entry;
 use Sholokhov\Sitemap\Exception\SitemapException;
+use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockItem;
 use Sholokhov\Sitemap\Source\SourceInterface;
 use Sholokhov\Sitemap\Strategy\IBlock\Normalizer\SectionEntryNormalizer;
 
@@ -28,7 +29,7 @@ class SectionSource implements SourceInterface
 
     public function __construct(
         protected readonly int $sectionId,
-        protected readonly int $iBlockId,
+        protected readonly IBlockItem $settings,
         protected readonly string $siteId,
     ) {
         if (Loader::includeModule('iblock') === false) {
@@ -60,7 +61,7 @@ class SectionSource implements SourceInterface
         if ($section = $this->sectionIterator->fetch()) {
             $this->elementSource = new ElementSource(
                 (int)$section['ID'],
-                $this->iBlockId,
+                $this->settings,
                 $this->siteId,
             );
 
@@ -76,7 +77,7 @@ class SectionSource implements SourceInterface
         if ($section = $this->sectionIterator->fetch()) {
             $this->elementSource = new ElementSource(
                 (int)$section['ID'],
-                $this->iBlockId,
+                $this->settings,
                 $this->siteId,
             );
 
@@ -97,7 +98,7 @@ class SectionSource implements SourceInterface
     protected function getSectionIterator(): ?Result
     {
         $filter = [
-            '=IBLOCK_ID' => $this->iBlockId,
+            '=IBLOCK_ID' => $this->settings->id,
             '=ACTIVE' => 'Y',
         ];
 

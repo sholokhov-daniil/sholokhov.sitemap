@@ -22,9 +22,9 @@ class SectionNode extends Node
     public bool $loadElements = true;
 
     /**
-     * Вложенные разделы
+     * Игнорируемые элементы
      *
-     * @var SectionNode[]
+     * @var Node[]
      */
-    public array $children = [];
+    public array $ignoredElements = [];
 }

@@ -14,6 +14,13 @@ interface StrategyInterface
      *
      * @return Entry|null
      */
-    public function fetch(): Entry|null;
+    public function fetch(): ?Entry;
+
+    /**
+     * Наименование файла в который производится запись стратегии
+     *
+     * @return string
+     */
+    public function getFileName(): string;
 }
 

@@ -14,7 +14,7 @@ class IBlockItem
      */
     public function __construct(
         public readonly int $id,
-        public array $sections,
+        public array $ignoredSections = [],
         public bool $active = false,
     )
     {
