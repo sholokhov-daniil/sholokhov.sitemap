@@ -14,5 +14,5 @@ interface SourceInterface
      *
      * @return Entry|null
      */
-    public function fetch(): Entry|null;
+    public function fetch(): ?Entry;
 }

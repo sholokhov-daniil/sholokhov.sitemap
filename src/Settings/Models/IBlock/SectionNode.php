@@ -3,21 +3,28 @@
 namespace Sholokhov\Sitemap\Settings\Models\IBlock;
 
 /**
- * Настройка раздела инфоблока
+ * Настройки раздела инфоблока
  */
-class SectionItem extends Item
+class SectionNode extends Node
 {
     /**
      * В генерации участвуют вложенные разделы
      *
      * @var bool
      */
-    public bool $loadSections = false;
+    public bool $loadSections = true;
 
     /**
      * В генерации участвуют вложенные элементы
      *
      * @var bool
      */
-    public bool $loadElements = false;
+    public bool $loadElements = true;
+
+    /**
+     * Вложенные разделы
+     *
+     * @var SectionNode[]
+     */
+    public array $children = [];
 }

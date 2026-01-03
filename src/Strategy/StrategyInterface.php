@@ -1,18 +1,19 @@
 <?php
 
-use Sholokhov\Sitemap\Strategy;
-use Bitrix\Main\Result;
+namespace Sholokhov\Sitemap\Strategy;
+
+use Sholokhov\Sitemap\Entry;
 
 /**
- * Стратегия генерации карты сайта
+ * Стратегия формирования ссылок, для генерации карты сайта
  */
 interface StrategyInterface
 {
     /**
      * Запустить работу
      *
-     * @return Result
+     * @return Entry|null
      */
-    public function run(): Result;
+    public function fetch(): Entry|null;
 }
 
