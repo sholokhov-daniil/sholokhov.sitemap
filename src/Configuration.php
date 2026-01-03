@@ -42,8 +42,8 @@ class Configuration
      */
     public function __get(string $name): mixed
     {
-        $this->checkAlias($name);
-        return $this->data[$name];
+        $key = $this->getAliasName($name);
+        return $this->data[$key];
     }
 
     /**
@@ -54,8 +54,8 @@ class Configuration
      */
     public function __set(string $name, $value): void
     {
-        $this->checkAlias($name);
-        $this->data[$name] = $value;
+        $key = $this->getAliasName($name);
+        $this->data[$key] = $value;
     }
 
     /**
@@ -79,6 +79,19 @@ class Configuration
     public function toArray(): array
     {
         return $this->data;
+    }
+
+    /**
+     * Возвращает корректный ключ массива с данными
+     *
+     * @param string $name
+     * @return string
+     * @throws SitemapException
+     */
+    private function getAliasName(string $name): string
+    {
+        $this->checkAlias($name);
+        return $this->aliases[$name];
     }
 
     /**

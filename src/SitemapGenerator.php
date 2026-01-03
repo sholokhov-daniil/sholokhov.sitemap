@@ -2,6 +2,7 @@
 
 namespace Sholokhov\Sitemap;
 
+use CBXPunycode;
 use Sholokhov\Sitemap\Source\SourceInterface;
 use Sholokhov\Sitemap\Modifier\ModifierInterface;
 use Sholokhov\Sitemap\Strategy\StrategyInterface;
@@ -95,11 +96,11 @@ class SitemapGenerator
      */
     private string $indexFileName = 'sitemap.xml';
 
-    private Configuration $configuration;
+    private Configuration $config;
 
-    public function __construct(Configuration $configuration)
+    public function __construct(Configuration $config)
     {
-        $this->configuration = $configuration;
+        $this->config = $config;
     }
 
     /**
@@ -110,8 +111,8 @@ class SitemapGenerator
     public function run(): void
     {
         $this->runtimes = [];
-        $pid = $this->configuration->siteId;
-        $index = new Index($this->indexFileName, $this->configuration->toArray());
+        $pid = $this->config->siteId;
+        $index = new Index($this->indexFileName, $this->config->toArray());
 
         foreach ($this->strategies as $strategy) {
             $this->generate($pid, $strategy);
@@ -240,7 +241,7 @@ class SitemapGenerator
      */
     private function generate(string $pid, StrategyInterface $strategy): void
     {
-        $runtime = $this->getOrCreateRuntime($pid, $strategy);
+        $runtime = $this->getRuntime($pid, $strategy);
 
         while ($entry = $strategy->fetch()) {
             $this->modify($entry);
@@ -264,10 +265,10 @@ class SitemapGenerator
      * @param StrategyInterface $strategy
      * @return Runtime
      */
-    private function getOrCreateRuntime(string $pid, StrategyInterface $strategy): Runtime
+    private function getRuntime(string $pid, StrategyInterface $strategy): Runtime
     {
         $fileName = $strategy->getFileName();
-        return $this->runtimes[$fileName] ??= new Runtime($pid, $fileName, $this->configuration->toArray());
+        return $this->runtimes[$fileName] ??= new Runtime($pid, $fileName, $this->config->toArray());
     }
 
     /**
@@ -278,6 +279,8 @@ class SitemapGenerator
      */
     private function modify(Entry $entry): void
     {
+        $this->modifyUrl($entry);
+
         foreach ($this->modifiers as $modifier) {
             $modifier->modify($entry);
         }
@@ -336,5 +339,23 @@ class SitemapGenerator
     private function isSplitNeeded(): bool
     {
         return $this->maxFileSize > 0 && $this->countEntry > $this->maxFileSize;
+    }
+
+    /**
+     * Добавляет хост к адресу, если он отсутствует
+     *
+     * @param Entry $entry
+     * @return void
+     */
+    private function modifyUrl(Entry $entry): void
+    {
+        $errors = [];
+        $host = $this->config->protocol
+            . '://'
+            . CBXPunycode::toASCII($this->config->domain, $errors);
+
+        if (!str_starts_with($entry->url, $host)) {
+            $entry->url = $host . $entry->url;
+        }
     }
 }
