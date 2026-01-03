@@ -2,13 +2,13 @@
 
 namespace Sholokhov\Sitemap\Strategy\IBlock;
 
-use Bitrix\Main\Loader;
 use Sholokhov\Sitemap\Entry;
 use Sholokhov\Sitemap\Exception\SitemapException;
 use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockItem;
 use Sholokhov\Sitemap\Source\IBlock\SectionSource;
 use Sholokhov\Sitemap\Strategy\StrategyInterface;
 
+use Bitrix\Main\Loader;
 use Bitrix\Iblock\IblockTable;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\ObjectPropertyException;
@@ -94,7 +94,7 @@ class IBlockStrategy implements StrategyInterface
     {
         return str_replace(
             ['#IBLOCK_ID#', '#IBLOCK_CODE#', '#IBLOCK_XML_ID#'],
-            [],
+            [$this->info['ID'], $this->info['CODE'], $this->info['XML_ID']],
             $this->filenameTemplate
         );
     }

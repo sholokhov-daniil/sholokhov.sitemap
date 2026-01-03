@@ -4,6 +4,7 @@ namespace Sholokhov\Sitemap;
 
 use Sholokhov\Sitemap\Source\SourceInterface;
 use Sholokhov\Sitemap\Modifier\ModifierInterface;
+use Sholokhov\Sitemap\Strategy\StrategyInterface;
 use Sholokhov\Sitemap\Validator\ValidatorInterface;
 
 use Bitrix\Main\EventResult;
@@ -46,18 +47,18 @@ use Bitrix\Seo\Sitemap\File\Runtime;
 class SitemapGenerator
 {
     /**
-     * Источники данных URL адресов, для включения в карту сайта
-     *
-     * @var SourceInterface[][]
-     */
-    private array $sources = [];
-
-    /**
      * Модификаторы адресов
      *
      * @var ModifierInterface[]
      */
     private array $modifiers = [];
+
+    /**
+     * Стратегии формирования данных, для sitemap
+     *
+     * @var StrategyInterface[]
+     */
+    private array $strategies = [];
 
     /**
      * Валидаторы добавляемых адресов
@@ -80,7 +81,11 @@ class SitemapGenerator
      */
     private int $countEntry = 0;
 
-
+    /**
+     * Максимальное количество записей в одном файле карты сайта
+     *
+     * @var int
+     */
     private int $maxFileSize = 0;
 
     /**
@@ -107,44 +112,40 @@ class SitemapGenerator
         $pid = '';
         $index = new Index($this->indexFileName, $this->configuration->toArray());
 
-        foreach ($this->sources as $fileName => $iterator) {
-            foreach ($iterator as $source) {
-                $this->generate($pid, $fileName, $source);
-            }
+        foreach ($this->strategies as $strategy) {
+            $this->generate($pid, $strategy);
         }
 
         $index->createIndex($this->indexEntries);
     }
 
     /**
-     * Добавить источник данных
+     * Добавить стратегию формирования данных
      *
      * @param string $sitemapName
-     * @param SourceInterface $source
+     * @param StrategyInterface $source
      * @return $this
      */
-    public function addSource(string $sitemapName, SourceInterface $source): self
+    public function addStrategy(StrategyInterface $strategy): self
     {
-        $this->sources[$sitemapName][] = $source;
+        $this->strategies[] = $strategy;
         return $this;
     }
 
     /**
-     * Указать список источников данных.
+     * Указать список стратегий формирования данных.
      *
-     * Все ранее добавленные источники удалятся
+     * Все ранее добавленные стратегии удалятся
      *
-     * @param SourceInterface[][] $sources
+     * @param StrategyInterface[][] $sources
      * @return $this
      */
-    public function setSources(array $sources): self
+    public function setStrategies(array $strategies): self
     {
-        $this->sources = [];
+        $this->strategies = [];
 
-        foreach ($sources as $filename => $iterator) {
-            foreach ($iterator as $source) {
-                $this->addSource($filename, $source);
-            }
+        foreach ($strategies as $strategy) {
+            $this->addStrategy($strategy);
         }
 
         return $this;
@@ -226,11 +227,11 @@ class SitemapGenerator
      * @param SourceInterface $source
      * @return void
      */
-    private function generate(string $pid, string $fileName, SourceInterface $source): void
+    private function generate(string $pid, StrategyInterface $strategy): void
     {
-        $runtime = new Runtime($pid, $fileName, $this->configuration->toArray());
+        $runtime = new Runtime($pid, $strategy->getFileName(), $this->configuration->toArray());
 
-        while ($entry = $source->fetch()) {
+        while ($entry = $strategy->fetch()) {
             $this->modify($entry);
 
             // TODO: Добавить событие, для модификации
