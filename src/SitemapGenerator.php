@@ -2,9 +2,14 @@
 
 namespace Sholokhov\Sitemap;
 
+use Bitrix\Main\ArgumentException;
+use Bitrix\Main\ObjectPropertyException;
+use Bitrix\Main\SystemException;
 use CBXPunycode;
+use Sholokhov\Sitemap\Settings\SitemapSettings;
 use Sholokhov\Sitemap\Source\SourceInterface;
 use Sholokhov\Sitemap\Modifier\ModifierInterface;
+use Sholokhov\Sitemap\Strategy\StrategyFactory;
 use Sholokhov\Sitemap\Strategy\StrategyInterface;
 use Sholokhov\Sitemap\Validator\ValidatorInterface;
 
@@ -101,6 +106,28 @@ class SitemapGenerator
     public function __construct(Configuration $config)
     {
         $this->config = $config;
+    }
+
+    /**
+     * Создание генератора карты сайта на основе объекта настроек
+     *
+     * @param SitemapSettings $settings
+     * @return self
+     * @throws Exception\SitemapException
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     */
+    public static function createFromSettings(SitemapSettings $settings): self
+    {
+        $config = Configuration::createFromSiteId($settings->siteId);
+
+        $generator = new self($config);
+        $generator->setStrategies(
+            StrategyFactory::create($settings)
+        );
+
+        return $generator;
     }
 
     /**

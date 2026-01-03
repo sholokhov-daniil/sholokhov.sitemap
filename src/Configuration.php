@@ -2,6 +2,11 @@
 
 namespace Sholokhov\Sitemap;
 
+use Bitrix\Main\ArgumentException;
+use Bitrix\Main\Localization\LanguageTable;
+use Bitrix\Main\ObjectPropertyException;
+use Bitrix\Main\SiteTable;
+use Bitrix\Main\SystemException;
 use Sholokhov\Sitemap\Exception\SitemapException;
 
 /**
@@ -33,6 +38,27 @@ class Configuration
     {
         $this->siteId = $siteId;
         $this->domain = $domain;
+    }
+
+    /**
+     * Создание конфигурации на основе настроек сайта
+     *
+     * @param string $siteId
+     * @return self
+     * @throws SitemapException
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     */
+    public static function createFromSiteId(string $siteId): self
+    {
+        $site = SiteTable::getByPrimary($siteId)->fetchObject();
+
+        if (!$site) {
+            throw new SitemapException("Site $siteId not found");
+        }
+
+        return new self($siteId, $site->get('SERVER_NAME'));
     }
 
     /**

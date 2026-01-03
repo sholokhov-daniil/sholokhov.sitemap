@@ -81,7 +81,7 @@ class ElementPolicy
     {
         $ids = array_reduce(
             $settings->items,
-            fn (array $carry, IBlockItem $item) => array_merge($carry, $item->executedElements),
+            fn (array $carry, IBlockItem $item) => array_merge($carry, $item->executedSectionElements),
             []
         );
 

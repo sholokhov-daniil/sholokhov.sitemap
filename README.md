@@ -3,7 +3,7 @@
 Еще находится в разработке
 
 
-example
+Ручная конфигурация
 ```php
 use Sholokhov\Sitemap\Configuration;
 use Sholokhov\Sitemap\Settings\SitemapSettings;
@@ -40,5 +40,38 @@ $generator->setStrategies(
     StrategyFactory::create($sitemapSettings)
 );
 
+$generator->run();
+```
+
+Автоматическое создание на основе настроек
+```php
+use Sholokhov\Sitemap\Settings\SitemapSettings;
+use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockItem;
+use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockSettings;
+use Sholokhov\Sitemap\SitemapGenerator;
+
+$iBlockSettings = new IBlockSettings;
+$iBlockSettings->fileName = 'sitemap-iblock-#IBLOCK_ID#.xml';
+$iBlockSettings->active = true;
+$iBlockSettings->items = [
+    new IBlockItem(
+        id: 2,
+        active: true,
+        executedSections: [],
+        executedSectionElements: [1]
+    )
+];
+
+$sitemapSettings = new SitemapSettings(
+    active: true,
+    fileName: 'sitemap.xml',
+    siteId: 's1',
+    maxFileSize: 30000,
+    modifiers: [],
+    validators: [],
+    iBlock:  $iBlockSettings
+);
+
+$generator = SitemapGenerator::createFromSettings($sitemapSettings);
 $generator->run();
 ```
