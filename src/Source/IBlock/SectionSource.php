@@ -2,13 +2,14 @@
 
 namespace Sholokhov\Sitemap\Source\IBlock;
 
-use Bitrix\Main\Loader;
 use Sholokhov\Sitemap\Entry;
 use Sholokhov\Sitemap\Exception\SitemapException;
+use Sholokhov\Sitemap\Rules\IBlock\IBlockPolicy;
 use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockItem;
 use Sholokhov\Sitemap\Source\SourceInterface;
 use Sholokhov\Sitemap\Strategy\IBlock\Normalizer\SectionEntryNormalizer;
 
+use Bitrix\Main\Loader;
 use Bitrix\Iblock\SectionTable;
 use Bitrix\Main\ORM\Query\Result;
 use Bitrix\Main\ArgumentException;
@@ -28,10 +29,12 @@ class SectionSource implements SourceInterface
     protected SectionEntryNormalizer $normalizer;
 
     public function __construct(
-        protected readonly int $sectionId,
+        protected readonly int        $sectionId,
         protected readonly IBlockItem $settings,
-        protected readonly string $siteId,
-    ) {
+        protected readonly string     $siteId,
+        protected readonly IBlockPolicy $policy,
+    )
+    {
         if (Loader::includeModule('iblock') === false) {
             throw new SitemapException('IBLOCK module is not installed.');
         }
@@ -45,46 +48,60 @@ class SectionSource implements SourceInterface
 
     public function fetch(): ?Entry
     {
-        // 1. Сначала элементы текущего раздела
-        if ($this->elementSource) {
-            if ($entry = $this->elementSource->fetch()) {
-                return $entry;
+        while (true) {
+            // 1. Сначала элементы текущего раздела
+            if ($this->elementSource !== null) {
+                if ($entry = $this->elementSource->fetch()) {
+                    return $entry;
+                }
+
+                $this->elementSource = null;
             }
-            $this->elementSource = null;
-        }
 
-        // 2. Берём следующий раздел
-        if ($this->sectionIterator === null) {
-            $this->sectionIterator = $this->getSectionIterator();
-        }
+            // 2. Инициализация итератора
+            if ($this->sectionIterator === null) {
+                $this->sectionIterator = $this->getSectionIterator();
+            }
 
-        if ($section = $this->sectionIterator->fetch()) {
+            if ($this->sectionIterator->getSelectedRowsCount() === 0) {
+                return null;
+            }
+
+            $section = $this->sectionIterator->fetch();
+
+            // 3. Страница закончилась → следующая
+            if ($section === false) {
+                $this->offset += $this->limit;
+                $this->sectionIterator = null;
+                continue;
+            }
+
+            // 4. Раздел запрещён → пропускаем ВСЁ поддерево
+            if ($this->isDeny($section)) {
+                continue;
+            }
+
+            // 5. Раздел разрешён → сначала сам раздел
             $this->elementSource = new ElementSource(
                 (int)$section['ID'],
                 $this->settings,
                 $this->siteId,
+                $this->policy
             );
 
             return $this->normalizer->normalize($section);
         }
+    }
 
-        // 3. Следующая страница
-        $this->offset += $this->limit;
-        $this->sectionIterator = null;
-
-        $this->sectionIterator = $this->getSectionIterator();
-
-        if ($section = $this->sectionIterator->fetch()) {
-            $this->elementSource = new ElementSource(
-                (int)$section['ID'],
-                $this->settings,
-                $this->siteId,
-            );
-
-            return $this->normalizer->normalize($section);
-        }
-
-        return null;
+    /**
+     * Проверка запрета добавления раздела в карту сайта
+     *
+     * @param array $section
+     * @return bool
+     */
+    protected function isDeny(array $section): bool
+    {
+        return $this->policy->isDenySection($section['LEFT_MARGIN'], $section['RIGHT_MARGIN']);
     }
 
     /**
@@ -103,7 +120,7 @@ class SectionSource implements SourceInterface
         ];
 
         if ($this->sectionId > 0) {
-            $filter['>LEFT_MARGIN']  = $this->leftMargin;
+            $filter['>LEFT_MARGIN'] = $this->leftMargin;
             $filter['<RIGHT_MARGIN'] = $this->rightMargin;
         }
 
@@ -115,6 +132,7 @@ class SectionSource implements SourceInterface
                 'XML_ID',
                 'TIMESTAMP_X',
                 'LEFT_MARGIN',
+                'RIGHT_MARGIN',
                 'IBLOCK_SECTION_ID',
                 'SECTION_PAGE_URL' => 'IBLOCK.SECTION_PAGE_URL',
             ],
@@ -122,7 +140,7 @@ class SectionSource implements SourceInterface
             'order' => [
                 'LEFT_MARGIN' => 'ASC',
             ],
-            'limit'  => $this->limit,
+            'limit' => $this->limit,
             'offset' => $this->offset,
         ]);
     }
@@ -137,7 +155,7 @@ class SectionSource implements SourceInterface
             throw new SitemapException("Section with ID {$this->sectionId} not found");
         }
 
-        $this->leftMargin  = (int)$section['LEFT_MARGIN'];
+        $this->leftMargin = (int)$section['LEFT_MARGIN'];
         $this->rightMargin = (int)$section['RIGHT_MARGIN'];
     }
 }

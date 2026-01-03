@@ -9,13 +9,15 @@ class IBlockItem
 {
     /**
      * @param int $id ID инфоблока
-     * @param SectionNode[] $sections Список разделов принимающих участие в генерации (добавленные руками)
+     * @param int[] $executedSections Список разделов запрещенных участвовать в генерации карты сайта
+     * @param int[][] $executedSectionElements Список элементов запрещенных участвовать в генерации карты сайта
      * @param bool $active Активность генерации
      */
     public function __construct(
         public readonly int $id,
-        public array $ignoredSections = [],
-        public bool $active = false,
+        public array        $executedSections = [],
+        public array        $executedSectionElements = [],
+        public bool         $active = false,
     )
     {
     }

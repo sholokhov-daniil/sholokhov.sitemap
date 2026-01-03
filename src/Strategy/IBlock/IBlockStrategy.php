@@ -4,6 +4,7 @@ namespace Sholokhov\Sitemap\Strategy\IBlock;
 
 use Sholokhov\Sitemap\Entry;
 use Sholokhov\Sitemap\Exception\SitemapException;
+use Sholokhov\Sitemap\Rules\IBlock\IBlockPolicy;
 use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockItem;
 use Sholokhov\Sitemap\Source\IBlock\SectionSource;
 use Sholokhov\Sitemap\Strategy\StrategyInterface;
@@ -59,7 +60,7 @@ class IBlockStrategy implements StrategyInterface
      * @throws SitemapException
      * @throws SystemException
      */
-    public function __construct(string $siteId, string $fileNameTemplate, IBlockItem $settings)
+    public function __construct(string $siteId, string $fileNameTemplate, IBlockItem $settings, IBlockPolicy $policy)
     {
         $this->settings = $settings;
         $this->siteId = $siteId;
@@ -71,7 +72,7 @@ class IBlockStrategy implements StrategyInterface
         }
 
         if ($settings->active) {
-            $this->section = new SectionSource(0, $this->settings, $siteId);
+            $this->section = new SectionSource(0, $this->settings, $siteId, $policy);
         }
     }
 

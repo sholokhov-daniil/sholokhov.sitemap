@@ -2,11 +2,9 @@
 
 namespace Sholokhov\Sitemap\Source\IBlock;
 
-use Bitrix\Main\ArgumentException;
-use Bitrix\Main\ObjectPropertyException;
-use Bitrix\Main\SystemException;
 use Sholokhov\Sitemap\Entry;
 use Sholokhov\Sitemap\Exception\SitemapException;
+use Sholokhov\Sitemap\Rules\IBlock\IBlockPolicy;
 use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockItem;
 use Sholokhov\Sitemap\Source\SourceInterface;
 use Sholokhov\Sitemap\Strategy\IBlock\Normalizer\ElementEntryNormalizer;
@@ -14,6 +12,9 @@ use Sholokhov\Sitemap\Strategy\IBlock\Normalizer\ElementEntryNormalizer;
 use Bitrix\Iblock\ElementTable;
 use Bitrix\Main\Loader;
 use Bitrix\Main\ORM\Query\Result;
+use Bitrix\Main\ArgumentException;
+use Bitrix\Main\ObjectPropertyException;
+use Bitrix\Main\SystemException;
 
 /**
  * Источник элементов инфоблока, для добавления в sitemap
@@ -42,9 +43,10 @@ class ElementSource implements SourceInterface
     protected Result|null $iterator = null;
 
     public function __construct(
-        protected readonly int $sectionId,
+        protected readonly int        $sectionId,
         protected readonly IBlockItem $settings,
-        protected readonly string $siteId
+        protected readonly string     $siteId,
+        protected readonly IBlockPolicy $policy,
     )
     {
         if (Loader::includeModule('iblock') === false) {
@@ -58,29 +60,48 @@ class ElementSource implements SourceInterface
      * Возвращает элементы карты сайта
      *
      * @inheritDoc
+     * @return Entry|null
      */
-    public function fetch(): Entry|null
+    public function fetch(): ?Entry
     {
-        if ($this->iterator === null) {
-            $this->iterator = $this->query();
-        }
+        while (true) {
+            if ($this->iterator === null) {
+                $this->iterator = $this->query();
+            }
 
-        if ($row = $this->iterator->fetch()) {
+            if ($this->iterator->getSelectedRowsCount() === 0) {
+                return null;
+            }
+
+            $row = $this->iterator->fetch();
+
+            if (!$row) {
+                $this->offset += self::LIMIT;
+                $this->iterator = null;
+                continue;
+            }
+
+            if ($this->isDeny($row)) {
+                continue;
+            }
+
             return $this->normalizer->normalize($row);
         }
+    }
 
-        // текущая страница закончилась
-        $this->offset += self::LIMIT;
-        $this->iterator = null;
+    /**
+     * Проверка запрета на добавление в карту сайта
+     *
+     * @param array $element
+     * @return bool
+     */
+    protected function isDeny(array $element): bool
+    {
+        $sectionId = (int)($element['IBLOCK_SECTION_ID'] ?? 0);
+        $leftMargin = (int)($element['LEFT_MARGIN'] ?? 0);
+        $rightMargin = (int)($element['RIGHT_MARGIN'] ?? 0);
 
-        // пробуем следующую страницу
-        $this->iterator = $this->query();
-
-        if ($this->iterator && ($row = $this->iterator->fetch())) {
-            return $this->normalizer->normalize($row);
-        }
-
-        return null;
+        return $this->policy->isDenyElement($sectionId, $leftMargin, $rightMargin);
     }
 
     /**
@@ -101,6 +122,8 @@ class ElementSource implements SourceInterface
                 'IBLOCK_SECTION_ID',
                 'XML_ID',
                 'CODE',
+                'RIGHT_MARGIN' => 'IBLOCK_SECTION.RIGHT_MARGIN',
+                'LEFT_MARGIN' => 'IBLOCK_SECTION.LEFT_MARGIN',
                 'DETAIL_PAGE_URL' => 'IBLOCK.DETAIL_PAGE_URL',
             ],
             'filter' => [

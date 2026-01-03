@@ -2,7 +2,6 @@
 
 namespace  Sholokhov\Sitemap\Strategy\IBlock\Normalizer;
 
-use Bitrix\Main\Diag\Debug;
 use CIBlock;
 use DateTime;
 use Sholokhov\Sitemap\Entry;

@@ -3,6 +3,7 @@
 namespace Sholokhov\Sitemap\Strategy;
 
 use Sholokhov\Sitemap\Exception\SitemapException;
+use Sholokhov\Sitemap\Rules\IBlock\IBlockPolicy;
 use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockItem;
 use Sholokhov\Sitemap\Settings\SitemapSettings;
 use Sholokhov\Sitemap\Strategy\IBlock\IBlockStrategy;
@@ -50,8 +51,10 @@ class StrategyFactory
             return [];
         }
 
+        $policy = new IBlockPolicy($settings->iBlock);
+
         return array_map(
-            fn(IBlockItem $iBlockItem) => new IBlockStrategy($settings->siteId, $settings->iBlock->fileName, $iBlockItem),
+            fn(IBlockItem $iBlockItem) => new IBlockStrategy($settings->siteId, $settings->iBlock->fileName, $iBlockItem, $policy),
             $settings->iBlock->items
         );
     }
