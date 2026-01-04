@@ -3,6 +3,7 @@
 namespace Sholokhov\Sitemap\Settings;
 
 use Sholokhov\Sitemap\Modifier\ModifierInterface;
+use Sholokhov\Sitemap\Settings\File\FsSettings;
 use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockSettings;
 use Sholokhov\Sitemap\Validator\ValidatorInterface;
 
@@ -19,7 +20,7 @@ class SitemapSettings
      * @param ValidatorInterface[] $validators Валидаторы проверяющие возможность добавления ссылки в карту сайта
      * @param int $maxFileSize Максимальное количество записей в рамках одного файла
      * @param IBlockSettings|null $iBlock Настройки генерации карты сайта из инфоблоков
-     * @param object|null $file Настройка генерации карты сайта из физической структуры каталога
+     * @param FsSettings|null $file Настройка генерации карты сайта из физической структуры каталога
      */
     public function __construct(
         public bool $active,
@@ -29,7 +30,7 @@ class SitemapSettings
         public array $modifiers = [],
         public array $validators = [],
         public ?IBlockSettings $iBlock = null,
-        public ?object $file = null
+        public ?FsSettings $file = null
     )
     {
     }
