@@ -12,25 +12,38 @@ use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockSettings;
 use Sholokhov\Sitemap\SitemapGenerator;
 use Sholokhov\Sitemap\Strategy\StrategyFactory;
 
+// Настройки генерации карты сайта, для инфоблоков
 $iBlockSettings = new IBlockSettings;
 $iBlockSettings->fileName = 'sitemap-iblock-#IBLOCK_ID#.xml';
 $iBlockSettings->active = true;
 $iBlockSettings->items = [
     new IBlockItem(
+        // ID инфоблока
         id: 2,
+        // Инфоблок принимает участие в формировании sitemap
         active: true,
+        // Массив ID разделов исключенных из формирования sitemap (запрещен и всем вложенным)
         executedSections: [],
+        // Массив ID разделов в которых элементы не принимают участие в генерации sitemap (запрещен и всем вложенным)
         executedSectionElements: [1]
     )
 ];
 
+// Общие настройки генерации карты сайта
 $sitemapSettings = new SitemapSettings(
+    // Активность генерации sitemap
     active: true,
+    // Наименование индексного файла
     fileName: 'sitemap.xml',
+    // ID сайта, для которого генерируется sitemap
     siteId: 's1',
+    // Максимальное количество записей в рамках одного файла
     maxFileSize: 30000,
+    // Модификаторы ссылок
     modifiers: [],
+    // Валидаторы ссылок
     validators: [],
+    // Настройки генерации sitemap для инфоблоков
     iBlock:  $iBlockSettings
 );
 
