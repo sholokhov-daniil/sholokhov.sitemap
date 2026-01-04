@@ -2,6 +2,7 @@
 
 namespace Sholokhov\Sitemap\Events;
 
+use Bitrix\Main\EventResult;
 use Exception;
 
 use Bitrix\Main\Event;
@@ -36,23 +37,23 @@ class EventManager
      *
      * @param string $id
      * @param array $parameters
-     * @return void
+     * @return EventResult[]
      * @throws ArgumentTypeException
      * @throws Exception
      */
-    public function call(string $id, array &$parameters = []): void
+    public function call(string $id, array &$parameters = []): array
     {
         $data = $this->get($id);
         $data['event']->setParameters($parameters);
         $data['event']->send();
 
-        if (null === $data['callback']) {
-            return;
+        if (is_callable($data['callback'])) {
+            foreach ($data['event']->getResults() as $eventResult) {
+                call_user_func($data['callback'], $eventResult);
+            }
         }
 
-        foreach ($data['event']->getResults() as $eventResult) {
-            call_user_func($data['callback'], $eventResult);
-        }
+        return $data['event']->getResults();
     }
 
     /**

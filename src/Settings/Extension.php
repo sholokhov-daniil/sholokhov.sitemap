@@ -10,12 +10,12 @@ namespace Sholokhov\Sitemap\Settings;
 class Extension
 {
     /**
+     * @param string $id Уникальный символьный код расширения
      * @param bool $active Активность расширения
-     * @param string $code Уникальный символьный код расширения
      */
     public function __construct(
+        public string $id,
         public bool $active,
-        public string $code,
     )
     {
     }

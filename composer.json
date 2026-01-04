@@ -1,5 +1,5 @@
 {
-  "name": "sholokhov/bitrix-exchange",
+  "name": "sholokhov/bitrix-sitemap",
   "keywords": ["bitrix", "sitemap"],
   "homepage": "https://github.com/sholokhov-daniil/sholokhov.sitemap",
   "type": "library",
@@ -14,7 +14,10 @@
   "autoload": {
     "psr-4": {
       "Sholokhov\\Sitemap\\": "./src"
-    }
+    },
+    "files": [
+      "bootstrap.php"
+    ]
   },
   "require": {
     "php": ">=8.4"

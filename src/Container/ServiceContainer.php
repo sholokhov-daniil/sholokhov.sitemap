@@ -8,12 +8,12 @@ use ReflectionParameter;
 use RuntimeException;
 
 /**
- * Class ServiceContainer
- *
  * Минималистичный DI-контейнер в стиле Laravel.
  * Не является PSR-11 контейнером намеренно (упрощённый API).
+ *
+ * @final
  */
-class ServiceContainer
+final class ServiceContainer
 {
     /**
      * Обычные бинды (transient)
@@ -46,6 +46,23 @@ class ServiceContainer
      * @var array<string, string>
      */
     protected array $aliases = [];
+
+    /**
+     * @var ServiceContainer
+     */
+    private static self $instance;
+
+    protected function __construct()
+    {
+    }
+
+    /**
+     * @return self
+     */
+    public static function getInstance(): self
+    {
+        return self::$instance ??= new self;
+    }
 
     /**
      * Регистрация зависимости (transient)
