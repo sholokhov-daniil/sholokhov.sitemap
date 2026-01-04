@@ -2,12 +2,12 @@
 
 namespace Sholokhov\Sitemap\Validator;
 
+use Sholokhov\Sitemap\Entry;
+
 use Bitrix\Main\IO\File;
 use Bitrix\Main\IO\FileNotFoundException;
 use Bitrix\Main\SiteTable;
 use Bitrix\Main\Web\Uri;
-
-use Sholokhov\Sitemap\Entry;
 
 /**
  * Валидатор проверяет, что URL не попадает под редиректы в .htaccess
@@ -26,11 +26,19 @@ class HtaccessValidator implements ValidatorInterface
      */
     protected array $rules = [];
 
-    protected readonly string $siteId;
+    /**
+     * Файл .htaccess
+     *
+     * @var File
+     */
+    protected readonly File $file;
 
+    /**
+     * @param string $siteId ID сайта на основе которого производится проверка
+     */
     public function __construct(string $siteId)
     {
-        $this->siteId = $siteId;
+        $this->file = $this->searchFile($siteId);
     }
 
     /**
@@ -46,8 +54,7 @@ class HtaccessValidator implements ValidatorInterface
             $this->load();
         }
 
-        $uri = new Uri($entry->url);
-        $path = $uri->getPath();
+        $path = (new Uri($entry->url))->getPath();
 
         foreach ($this->rules as $rule) {
             if ($this->isRedirected($rule, $path)) {
@@ -100,7 +107,7 @@ class HtaccessValidator implements ValidatorInterface
     }
 
     /**
-     * Проверка RewriteRule с учетом RewriteCond
+     * Проверка RewriteRule через регулярное выражение
      *
      * @param array $rule
      * @param string $path
@@ -108,22 +115,29 @@ class HtaccessValidator implements ValidatorInterface
      */
     protected function matchRewriteRule(array $rule, string $path): bool
     {
-        // Проверяем, есть ли флаг R
         if (empty($rule['FLAGS']) || !array_filter($rule['FLAGS'], fn($f) => str_starts_with($f, 'R'))) {
             return false;
         }
 
-        // Проверяем условия RewriteCond
-        if (!empty($rule['CONDITIONS'])) {
-            foreach ($rule['CONDITIONS'] as $condPattern) {
-                if (!$this->matchRedirectMatch($condPattern, $path)) {
-                    return false; // условие не выполнено
-                }
+        foreach ($rule['CONDITIONS'] ?? [] as $condPattern) {
+            if (!$this->matchRedirectMatch($condPattern, $path)) {
+                return false;
             }
         }
 
-        // Проверяем сам RewriteRule
         return $this->matchRedirectMatch('^' . $rule['FROM'], $path);
+    }
+
+    /**
+     * Поиск htaccess файла
+     *
+     * @param string $siteId
+     * @return File
+     */
+    protected function searchFile(string $siteId): File
+    {
+        $path = SiteTable::getDocumentRoot($siteId) . DIRECTORY_SEPARATOR . ".htaccess";
+        return new File($path, $siteId);
     }
 
     /**
@@ -135,70 +149,100 @@ class HtaccessValidator implements ValidatorInterface
     {
         $this->rules = [];
 
-        $htaccessPath = SiteTable::getDocumentRoot($this->siteId) . DIRECTORY_SEPARATOR . ".htaccess";
-        $htaccess = new File($htaccessPath, $this->siteId);
-
-        if (!$htaccess->isExists()) {
+        if (!$this->file->isExists()) {
             return;
         }
 
-        $contents = $htaccess->getContents();
-        $lines = preg_split("/\r?\n/", $contents) ?: [];
+        $lines = preg_split("/\r?\n/", $this->file->getContents()) ?: [];
 
         $rewriteConds = [];
 
         foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '' || str_starts_with($line, '#')) {
+            $line = $this->cleanLine($line);
+            if ($line === '') {
                 continue;
             }
 
-            // Отрезаем inline комментарии
-            if (($pos = mb_strpos($line, '#')) !== false) {
-                $line = mb_substr($line, 0, $pos);
-            }
-            $line = trim($line);
-
-            // Redirect / RedirectMatch
-            if (preg_match('#^(Redirect|RedirectMatch)\s+(\d{3})\s+(\S+)\s+(\S+)$#i', $line, $matches)) {
-                [, $type, $status, $from, $to] = $matches;
-
-                if ($type === 'Redirect') {
-                    $from = '/' . ltrim($from, '/');
-                    $to = '/' . ltrim($to, '/');
-                }
-
-                $this->rules[] = [
-                    'TYPE' => $type,
-                    'FROM' => $from,
-                    'TO' => $to,
-                    'STATUS' => (int)$status,
-                ];
+            if ($this->parseRedirect($line) || $this->parseRewrite($line, $rewriteConds)) {
                 continue;
             }
 
-            // RewriteCond
-            if (preg_match('#^RewriteCond\s+(\S+)\s+(.*)$#i', $line, $matches)) {
-                $condPattern = trim($matches[2]);
-                $rewriteConds[] = $condPattern;
-                continue;
-            }
-
-            // RewriteRule
-            if (preg_match('#^RewriteRule\s+(\S+)\s+(\S+)(?:\s+\[(.*)\])?$#i', $line, $matches)) {
-                [, $pattern, $to, $flagsStr] = array_pad($matches, 4, '');
-                $flags = $flagsStr !== '' ? array_map('trim', explode(',', $flagsStr)) : [];
-
-                $this->rules[] = [
-                    'TYPE' => 'RewriteRule',
-                    'FROM' => $pattern,
-                    'TO' => $to,
-                    'FLAGS' => $flags,
-                    'CONDITIONS' => $rewriteConds,
-                ];
-
-                $rewriteConds = [];
+            // Если это RewriteCond, добавляем в массив условий
+            if (preg_match('#^RewriteCond\s+\S+\s+(.*)$#i', $line, $matches)) {
+                $rewriteConds[] = trim($matches[1]);
             }
         }
+    }
+
+    /**
+     * Чистим строку: trim и удаляем комментарии
+     *
+     * @param string $line
+     * @return string
+     */
+    protected function cleanLine(string $line): string
+    {
+        $line = trim($line);
+        if (($pos = mb_strpos($line, '#')) !== false) {
+            $line = mb_substr($line, 0, $pos);
+        }
+        return trim($line);
+    }
+
+    /**
+     * Парсим Redirect и RedirectMatch
+     *
+     * @param string $line
+     * @return bool
+     */
+    protected function parseRedirect(string $line): bool
+    {
+        if (preg_match('#^(Redirect|RedirectMatch)\s+(\d{3})\s+(\S+)\s+(\S+)$#i', $line, $matches)) {
+            [, $type, $status, $from, $to] = $matches;
+
+            if ($type === 'Redirect') {
+                $from = '/' . ltrim($from, '/');
+                $to = '/' . ltrim($to, '/');
+            }
+
+            $this->rules[] = [
+                'TYPE' => $type,
+                'FROM' => $from,
+                'TO' => $to,
+                'STATUS' => (int)$status,
+            ];
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Парсим RewriteRule
+     *
+     * @param string $line
+     * @param array $rewriteConds
+     * @return bool
+     */
+    protected function parseRewrite(string $line, array &$rewriteConds): bool
+    {
+        if (preg_match('#^RewriteRule\s+(\S+)\s+(\S+)(?:\s+\[(.*)\])?$#i', $line, $matches)) {
+            [, $pattern, $to, $flagsStr] = array_pad($matches, 4, '');
+            $flags = $flagsStr !== '' ? array_map('trim', explode(',', $flagsStr)) : [];
+
+            $this->rules[] = [
+                'TYPE' => 'RewriteRule',
+                'FROM' => $pattern,
+                'TO' => $to,
+                'FLAGS' => $flags,
+                'CONDITIONS' => $rewriteConds,
+            ];
+
+            $rewriteConds = [];
+            return true;
+        }
+
+        return false;
     }
 }
