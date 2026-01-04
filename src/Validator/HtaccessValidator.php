@@ -22,9 +22,9 @@ class HtaccessValidator implements ValidatorInterface
     /**
      * Кэш правил по сайту
      *
-     * @var array<string, array<int, array{TYPE:string, FROM:string, TO:string, FLAGS?:array, CONDITIONS?:array}>>
+     * @var array<int, array{TYPE:string, FROM:string, TO:string, FLAGS?:array, CONDITIONS?:array}>
      */
-    protected static array $rules = [];
+    protected array $rules = [];
 
     protected readonly string $siteId;
 
@@ -42,10 +42,14 @@ class HtaccessValidator implements ValidatorInterface
      */
     public function validate(Entry $entry): bool
     {
+        if (empty($this->rules)) {
+            $this->load();
+        }
+
         $uri = new Uri($entry->url);
         $path = $uri->getPath();
 
-        foreach ($this->getRules() as $rule) {
+        foreach ($this->rules as $rule) {
             if ($this->isRedirected($rule, $path)) {
                 return false;
             }
@@ -104,7 +108,7 @@ class HtaccessValidator implements ValidatorInterface
      */
     protected function matchRewriteRule(array $rule, string $path): bool
     {
-        // Если нет флага R, значит это не редирект
+        // Проверяем, есть ли флаг R
         if (empty($rule['FLAGS']) || !array_filter($rule['FLAGS'], fn($f) => str_starts_with($f, 'R'))) {
             return false;
         }
@@ -123,28 +127,13 @@ class HtaccessValidator implements ValidatorInterface
     }
 
     /**
-     * Получение правил редиректов для текущего сайта
-     *
-     * @return array|array[]
-     * @throws FileNotFoundException
-     */
-    protected function getRules(): array
-    {
-        if (!isset(static::$rules[$this->siteId])) {
-            $this->load();
-        }
-
-        return static::$rules[$this->siteId];
-    }
-
-    /**
      * Загрузка правил из .htaccess
      *
      * @throws FileNotFoundException
      */
     protected function load(): void
     {
-        static::$rules[$this->siteId] = [];
+        $this->rules = [];
 
         $htaccessPath = SiteTable::getDocumentRoot($this->siteId) . DIRECTORY_SEPARATOR . ".htaccess";
         $htaccess = new File($htaccessPath, $this->siteId);
@@ -172,14 +161,14 @@ class HtaccessValidator implements ValidatorInterface
 
             // Redirect / RedirectMatch
             if (preg_match('#^(Redirect|RedirectMatch)\s+(\d{3})\s+(\S+)\s+(\S+)$#i', $line, $matches)) {
-                [$full, $type, $status, $from, $to] = $matches;
+                [, $type, $status, $from, $to] = $matches;
 
                 if ($type === 'Redirect') {
                     $from = '/' . ltrim($from, '/');
                     $to = '/' . ltrim($to, '/');
                 }
 
-                static::$rules[$this->siteId][] = [
+                $this->rules[] = [
                     'TYPE' => $type,
                     'FROM' => $from,
                     'TO' => $to,
@@ -197,10 +186,10 @@ class HtaccessValidator implements ValidatorInterface
 
             // RewriteRule
             if (preg_match('#^RewriteRule\s+(\S+)\s+(\S+)(?:\s+\[(.*)\])?$#i', $line, $matches)) {
-                [$full, $pattern, $to, $flagsStr] = array_pad($matches, 4, '');
+                [, $pattern, $to, $flagsStr] = array_pad($matches, 4, '');
                 $flags = $flagsStr !== '' ? array_map('trim', explode(',', $flagsStr)) : [];
 
-                static::$rules[$this->siteId][] = [
+                $this->rules[] = [
                     'TYPE' => 'RewriteRule',
                     'FROM' => $pattern,
                     'TO' => $to,
@@ -208,7 +197,6 @@ class HtaccessValidator implements ValidatorInterface
                     'CONDITIONS' => $rewriteConds,
                 ];
 
-                // Сброс условий после применения RewriteRule
                 $rewriteConds = [];
             }
         }
