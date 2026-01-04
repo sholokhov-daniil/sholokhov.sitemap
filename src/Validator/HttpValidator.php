@@ -51,6 +51,7 @@ class HttpValidator implements ValidatorInterface
 
             $headerContent = $this->readHeadStreamed($response);
 
+            // TODO: Добавить возможность отключать валидацию canonical
             return $this->canonicalValidate($headerContent, $entry);
         } catch (ClientExceptionInterface) {
             return false;
@@ -80,7 +81,13 @@ class HttpValidator implements ValidatorInterface
      */
     protected function canonicalValidate(string $content, Entry $entry): bool
     {
-        return ContentHelper::getCanonical($content) === $entry->url;
+        $canonical = ContentHelper::getCanonical($content);
+
+        if ($canonical === '') {
+            return true;
+        }
+
+        return $canonical === $entry->url;
     }
 
     /**
