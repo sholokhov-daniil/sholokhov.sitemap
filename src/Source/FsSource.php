@@ -62,6 +62,7 @@ class FsSource implements SourceInterface
     /**
      * Возвращает доступную ссылку
      *
+     * @inheritDoc
      * @return Entry|null
      * @throws FileNotFoundException
      * @throws InvalidPathException

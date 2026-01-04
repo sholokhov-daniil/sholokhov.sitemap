@@ -11,10 +11,14 @@ use Sholokhov\Sitemap\Strategy\StrategyInterface;
 
 use Bitrix\Main\Loader;
 use Bitrix\Iblock\IblockTable;
+use Bitrix\Main\LoaderException;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\SystemException;
 
+/**
+ * Стратегия формирования доступных элементов и разделов, для добавления в карту сайта
+ */
 class IBlockStrategy implements StrategyInterface
 {
     /**
@@ -54,11 +58,14 @@ class IBlockStrategy implements StrategyInterface
 
     /**
      * @param string $siteId
+     * @param string $fileNameTemplate
      * @param IBlockItem $settings
+     * @param IBlockPolicy $policy
      * @throws ArgumentException
      * @throws ObjectPropertyException
      * @throws SitemapException
      * @throws SystemException
+     * @throws LoaderException
      */
     public function __construct(string $siteId, string $fileNameTemplate, IBlockItem $settings, IBlockPolicy $policy)
     {
@@ -106,7 +113,9 @@ class IBlockStrategy implements StrategyInterface
      * @return array
      * @throws ArgumentException
      * @throws ObjectPropertyException
+     * @throws LoaderException
      * @throws SystemException
+     * @throws SitemapException
      */
     protected function getInfo(): array
     {
