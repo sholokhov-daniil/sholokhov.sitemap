@@ -120,6 +120,8 @@ class SitemapGenerator
      */
     public static function createFromSettings(SitemapSettings $settings): self
     {
+        // TODO: Добавить проверку активности генерации
+        
         $config = Configuration::createFromSiteId($settings->siteId);
 
         $generator = new self($config);
@@ -129,6 +131,12 @@ class SitemapGenerator
                 StrategyFactory::create($settings->siteId, $settings->strategy)
             );
         }
+
+        if ($settings->fileName) {
+            $generator->setIndexFileName($settings->fileName);
+        }
+
+        $generator->setMaxFileSize($settings->maxFileSize);
 
         return $generator;
     }
@@ -258,6 +266,18 @@ class SitemapGenerator
     public function setIndexFileName(string $fileName): self
     {
         $this->indexFileName = $fileName;
+        return $this;
+    }
+
+    /**
+     * Максимальное количество записей в рамках одного файла
+     *
+     * @param int $maxFileSize
+     * @return $this
+     */
+    public function setMaxFileSize(int $maxFileSize): self
+    {
+        $this->maxFileSize = $maxFileSize;
         return $this;
     }
 
