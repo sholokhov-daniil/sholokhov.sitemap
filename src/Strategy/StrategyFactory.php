@@ -29,10 +29,30 @@ class StrategyFactory
      */
     public static function create(SitemapSettings $settings): array
     {
-        $iterator = self::buildIBlock($settings);
+        $iterator = array_merge(
+            self::createIBlock($settings),
+            self::createFs($settings)
+        );
         // TODO: Добавить событие, для модификации
 
         return $iterator;
+    }
+
+    /**
+     * Создает стратегии генерации данных на основе файловой системы
+     *
+     * @param SitemapSettings $settings
+     * @return array|FsStrategy[]
+     */
+    public static function createFs(SitemapSettings $settings): array
+    {
+        if (!$settings->file || !$settings->file->active) {
+            return [];
+        }
+
+        return [
+            new FsStrategy($settings->siteId, $settings->file),
+        ];
     }
 
     /**
@@ -45,9 +65,9 @@ class StrategyFactory
      * @throws SystemException
      * @throws SitemapException
      */
-    public static function buildIBlock(SitemapSettings $settings): array
+    public static function createIBlock(SitemapSettings $settings): array
     {
-        if (!$settings->iBlock->active) {
+        if (!$settings->iBlock || !$settings->iBlock->active) {
             return [];
         }
 

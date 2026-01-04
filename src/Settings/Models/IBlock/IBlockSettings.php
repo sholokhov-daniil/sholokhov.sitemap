@@ -2,17 +2,21 @@
 
 namespace Sholokhov\Sitemap\Settings\Models\IBlock;
 
-use Sholokhov\Sitemap\Settings\AbstractGroup;
-
 /**
  * Настройки импорта карты сайта на основе инфоблока
  */
-class IBlockSettings extends AbstractGroup
+class IBlockSettings
 {
     /**
-     * Настройки инфоблоков
-     *
-     * @var IBlockItem[]
+     * @param bool $active Активность генерации карты сайта из инфоблока
+     * @param string $fileName Наименование файла сохранения карты сайта
+     * @param IBlockItem[] $items Настройки инфоблоков
      */
-    public array $items = [];
+    public function __construct(
+        public bool $active,
+        public string $fileName,
+        public array $items = []
+    )
+    {
+    }
 }
