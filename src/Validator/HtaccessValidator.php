@@ -44,6 +44,7 @@ class HtaccessValidator implements ValidatorInterface
     /**
      * Проверка возможности добавить ссылку в sitemap
      *
+     * @inheritDoc
      * @param Entry $entry
      * @return bool
      * @throws FileNotFoundException

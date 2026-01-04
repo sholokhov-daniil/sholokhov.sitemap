@@ -11,37 +11,32 @@ use Sholokhov\Sitemap\Disassemblers\RobotsDisassembler;
 class RobotsValidator implements ValidatorInterface
 {
     /**
-     * Список закрытых адресов
+     * Адреса исключенные из индексации
      *
      * @var array
      */
-    protected static array $disallow = [];
+    private readonly array $disallow;
 
     /**
-     * ID сайта, для которого производится проверка robots.txt
-     *
-     * @var string
+     * @param string $siteId ID сайта, для которого производится проверка robots.txt
      */
-    protected readonly string $siteId;
-
     public function __construct(string $siteId)
     {
-        $this->siteId = $siteId;
+        $disassembler = new RobotsDisassembler($siteId);
+        $this->disallow = $disassembler->getDisallow();
     }
 
     /**
      * Выполнить проверку
      *
+     * @inheritDoc
      * @param Entry $entry
      * @return bool
      */
     public function validate(Entry $entry): bool
     {
-        $iterator = $this->getDisallow();
-
-        foreach ($iterator as $disallow) {
-            $patternUrl = str_replace(['.', '+', '*', '?'], ['\.', '\+', '.*', '\?'], $disallow);
-            $pattern = sprintf('#(^.*:\/\/.*%s)|(^%s)#', $patternUrl, $patternUrl);
+        foreach ($this->disallow as $disallow) {
+            $pattern = $this->buildPattern($disallow);
 
             if (preg_match($pattern, $entry->url)) {
                 return false;
@@ -52,27 +47,14 @@ class RobotsValidator implements ValidatorInterface
     }
 
     /**
-     * Получение исключений.
+     * Преобразует путь из robots.txt в регулярное выражение
      *
-     * @return array
+     * @param string $disallow
+     * @return string
      */
-    protected function getDisallow(): array
+    protected function buildPattern(string $disallow): string
     {
-        if (!array_key_exists($this->siteId, static::$disallow)) {
-            $this->load();
-        }
-
-        return static::$disallow[$this->siteId];
-    }
-
-    /**
-     * Загрузка исключений.
-     *
-     * @return void
-     */
-    protected function load(): void
-    {
-        $disassembler = new RobotsDisassembler($this->siteId);
-        static::$disallow[$this->siteId] = $disassembler->getDisallow();
+        $escaped = str_replace('\*', '.*', preg_quote($disallow, '#'));
+        return '#(^.*://.*' . $escaped . ')|(^' . $escaped . ')#';
     }
 }
