@@ -123,9 +123,12 @@ class SitemapGenerator
         $config = Configuration::createFromSiteId($settings->siteId);
 
         $generator = new self($config);
-        $generator->setStrategies(
-            StrategyFactory::create($settings)
-        );
+
+        if ($settings->strategy) {
+            $generator->setStrategies(
+                StrategyFactory::create($settings->siteId, $settings->strategy)
+            );
+        }
 
         return $generator;
     }

@@ -4,8 +4,10 @@ namespace Sholokhov\Sitemap\Strategy;
 
 use Sholokhov\Sitemap\Exception\SitemapException;
 use Sholokhov\Sitemap\Rules\IBlock\IBlockPolicy;
+use Sholokhov\Sitemap\Settings\File\FsSettings;
 use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockItem;
-use Sholokhov\Sitemap\Settings\SitemapSettings;
+use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockSettings;
+use Sholokhov\Sitemap\Settings\Strategies;
 use Sholokhov\Sitemap\Strategy\IBlock\IBlockStrategy;
 
 use Bitrix\Main\ArgumentException;
@@ -20,19 +22,25 @@ class StrategyFactory
     /**
      * Создание всех доступных стратегий генерации данных
      *
-     * @param SitemapSettings $settings
+     * @param Strategies $settings
      * @return array
      * @throws ArgumentException
      * @throws ObjectPropertyException
      * @throws SitemapException
      * @throws SystemException
      */
-    public static function create(SitemapSettings $settings): array
+    public static function create(string $siteId, Strategies $settings): array
     {
-        $iterator = array_merge(
-            self::createIBlock($settings),
-            self::createFs($settings)
-        );
+        $iterator = [];
+
+        if ($settings->iBlock) {
+            $iterator = self::createIBlock($siteId, $settings->iBlock);
+        }
+
+        if ($settings->fs) {
+            $iterator = array_merge($iterator, self::createFs($siteId, $settings->fs));
+        }
+
         // TODO: Добавить событие, для модификации
 
         return $iterator;
@@ -41,41 +49,41 @@ class StrategyFactory
     /**
      * Создает стратегии генерации данных на основе файловой системы
      *
-     * @param SitemapSettings $settings
+     * @param FsSettings $settings
      * @return array|FsStrategy[]
      */
-    public static function createFs(SitemapSettings $settings): array
+    public static function createFs(string $siteId, FsSettings $settings): array
     {
-        if (!$settings->file || !$settings->file->active) {
+        if ($settings->active === false) {
             return [];
         }
 
         return [
-            new FsStrategy($settings->siteId, $settings->file),
+            new FsStrategy($siteId, $settings),
         ];
     }
 
     /**
      * Создает стратегий генерации данных по инфоблокам
      *
-     * @param SitemapSettings $settings
+     * @param IBlockSettings $settings
      * @return array
      * @throws ArgumentException
      * @throws ObjectPropertyException
      * @throws SystemException
      * @throws SitemapException
      */
-    public static function createIBlock(SitemapSettings $settings): array
+    public static function createIBlock(string $siteId, IBlockSettings $settings): array
     {
-        if (!$settings->iBlock || !$settings->iBlock->active) {
+        if ($settings->active === false) {
             return [];
         }
 
-        $policy = new IBlockPolicy($settings->iBlock);
+        $policy = new IBlockPolicy($settings);
 
         return array_map(
-            fn(IBlockItem $iBlockItem) => new IBlockStrategy($settings->siteId, $settings->iBlock->fileName, $iBlockItem, $policy),
-            $settings->iBlock->items
+            fn(IBlockItem $iBlockItem) => new IBlockStrategy($siteId, $settings->fileName, $iBlockItem, $policy),
+            $settings->items
         );
     }
 }

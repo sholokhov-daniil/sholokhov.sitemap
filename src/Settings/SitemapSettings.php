@@ -29,8 +29,7 @@ class SitemapSettings
         public int $maxFileSize,
         public array $modifiers = [],
         public array $validators = [],
-        public ?IBlockSettings $iBlock = null,
-        public ?FsSettings $file = null
+        public ?Strategies $strategy = null,
     )
     {
     }

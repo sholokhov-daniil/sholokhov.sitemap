@@ -7,6 +7,7 @@
 ```php
 use Sholokhov\Sitemap\SitemapGenerator;
 use Sholokhov\Sitemap\Configuration;
+use Sholokhov\Sitemap\Settings\Strategies;
 use Sholokhov\Sitemap\Settings\SitemapSettings;
 use Sholokhov\Sitemap\Settings\File\FsEntity;
 use Sholokhov\Sitemap\Settings\File\FsSettings;
@@ -28,44 +29,48 @@ $sitemapSettings = new SitemapSettings(
     modifiers: [],
     // Валидаторы ссылок
     validators: [],
-    // Настройки генерации карты сайта, для инфоблоков
-    iBlock: new IBlockSettings(
-        // Активность генерации
-        active: true,
-        // Наименование файла в который будет производиться запись
-        fileName: 'sitemap-iblock-#IBLOCK_ID#.xml',
-        // Настройки конкретных инфоблоков
-        items: [
-            new IBlockItem(
+    // Стратегии генерации карты сайта
+    strategy: new Strategies(
+        // Настройки генерации карты сайта, для инфоблоков
+        iBlock: new IBlockSettings(
+            // Активность генерации
+            active: true,
+            // Наименование файла в который будет производиться запись
+            fileName: 'sitemap-iblock-#IBLOCK_ID#.xml',
+            // Настройки конкретных инфоблоков
+            items: [
+                new IBlockItem(
                 // ID инфоблока
-                id: 2,
-                // Инфоблок принимает участие в формировании sitemap
-                active: true,
-                // Массив ID разделов исключенных из формирования sitemap (запрещен и всем вложенным)
-                executedSections: [],
-                // Массив ID разделов в которых элементы не принимают участие в генерации sitemap (запрещен и всем вложенным)
-                executedSectionElements: [1]
-            )
-        ]
-    ),
-    // Настройки генерации карты сайта из файловой системы
-    file: new FsSettings(
-        // Активность генерации
-        active: true,
-        // Наименование файла в который будет производиться запись
-        fileName: 'sitemap-files.xml',
-        // Директории и файлы принимающие участие в генерации
-        items: [
-            new FsEntity(
+                    id: 2,
+                    // Инфоблок принимает участие в формировании sitemap
+                    active: true,
+                    // Массив ID разделов исключенных из формирования sitemap (запрещен и всем вложенным)
+                    executedSections: [],
+                    // Массив ID разделов в которых элементы не принимают участие в генерации sitemap (запрещен и всем вложенным)
+                    executedSectionElements: [1]
+                )
+            ]
+        ),
+
+        // Настройки генерации карты сайта из файловой системы
+        fs: new FsSettings(
+            // Активность генерации
+            active: true,
+            // Наименование файла в который будет производиться запись
+            fileName: 'sitemap-files.xml',
+            // Директории и файлы принимающие участие в генерации
+            items: [
+                new FsEntity(
                 // Принимает участие в генерации
-                active: true, 
-                // Путь до файла или директории
-                path: '/about/', 
-                // Тип элемента файловой системы: D - директория; F - файл
-                type: 'D'
-            ),
-        ]
-    )
+                    active: true,
+                    // Путь до файла или директории
+                    path: '/about/',
+                    // Тип элемента файловой системы: D - директория; F - файл
+                    type: 'D'
+                ),
+            ]
+        )
+    ),
 );
 
 $generatorConfiguration = new Configuration($sitemapSettings->siteId, 'bitrix-exchange-market.localhost');
@@ -80,9 +85,10 @@ $generator->run();
 Автоматическое создание на основе настроек
 ```php
 use Sholokhov\Sitemap\SitemapGenerator;
+use Sholokhov\Sitemap\Settings\Strategies;
+use Sholokhov\Sitemap\Settings\SitemapSettings;
 use Sholokhov\Sitemap\Settings\File\FsEntity;
 use Sholokhov\Sitemap\Settings\File\FsSettings;
-use Sholokhov\Sitemap\Settings\SitemapSettings;
 use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockItem;
 use Sholokhov\Sitemap\Settings\Models\IBlock\IBlockSettings;
 
@@ -100,44 +106,48 @@ $sitemapSettings = new SitemapSettings(
     modifiers: [],
     // Валидаторы ссылок
     validators: [],
-    // Настройки генерации карты сайта, для инфоблоков
-    iBlock: new IBlockSettings(
-        // Активность генерации
-        active: true,
-        // Наименование файла в который будет производиться запись
-        fileName: 'sitemap-iblock-#IBLOCK_ID#.xml',
-        // Настройки конкретных инфоблоков
-        items: [
-            new IBlockItem(
+    // Стратегии генерации карты сайта
+    strategy: new Strategies(
+        // Настройки генерации карты сайта, для инфоблоков
+        iBlock: new IBlockSettings(
+            // Активность генерации
+            active: true,
+            // Наименование файла в который будет производиться запись
+            fileName: 'sitemap-iblock-#IBLOCK_ID#.xml',
+            // Настройки конкретных инфоблоков
+            items: [
+                new IBlockItem(
                 // ID инфоблока
-                id: 2,
-                // Инфоблок принимает участие в формировании sitemap
-                active: true,
-                // Массив ID разделов исключенных из формирования sitemap (запрещен и всем вложенным)
-                executedSections: [],
-                // Массив ID разделов в которых элементы не принимают участие в генерации sitemap (запрещен и всем вложенным)
-                executedSectionElements: [1]
-            )
-        ]
-    ),
-    // Настройки генерации карты сайта из файловой системы
-    file: new FsSettings(
-        // Активность генерации
-        active: true,
-        // Наименование файла в который будет производиться запись
-        fileName: 'sitemap-files.xml',
-        // Директории и файлы принимающие участие в генерации
-        items: [
-            new FsEntity(
+                    id: 2,
+                    // Инфоблок принимает участие в формировании sitemap
+                    active: true,
+                    // Массив ID разделов исключенных из формирования sitemap (запрещен и всем вложенным)
+                    executedSections: [],
+                    // Массив ID разделов в которых элементы не принимают участие в генерации sitemap (запрещен и всем вложенным)
+                    executedSectionElements: [1]
+                )
+            ]
+        ),
+
+        // Настройки генерации карты сайта из файловой системы
+        fs: new FsSettings(
+            // Активность генерации
+            active: true,
+            // Наименование файла в который будет производиться запись
+            fileName: 'sitemap-files.xml',
+            // Директории и файлы принимающие участие в генерации
+            items: [
+                new FsEntity(
                 // Принимает участие в генерации
-                active: true, 
-                // Путь до файла или директории
-                path: '/about/', 
-                // Тип элемента файловой системы: D - директория; F - файл
-                type: 'D'
-            ),
-        ]
-    )
+                    active: true,
+                    // Путь до файла или директории
+                    path: '/about/',
+                    // Тип элемента файловой системы: D - директория; F - файл
+                    type: 'D'
+                ),
+            ]
+        )
+    ),
 );
 
 $generator = SitemapGenerator::createFromSettings($sitemapSettings);
